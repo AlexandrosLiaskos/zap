@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -142,6 +143,27 @@ func loadApps() []appEntry {
 		}
 	}
 
+	// Start Menu .lnk files (works without explorer.exe running)
+	lnkDirs := []string{
+		filepath.Join(os.Getenv("APPDATA"), `Microsoft\Windows\Start Menu\Programs`),
+		filepath.Join(os.Getenv("ProgramData"), `Microsoft\Windows\Start Menu\Programs`),
+	}
+	for _, dir := range lnkDirs {
+		filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() || !strings.HasSuffix(strings.ToLower(path), ".lnk") {
+				return nil
+			}
+			name := strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))
+			lower := strings.ToLower(name)
+			if seen[lower] || ghostApps[lower] {
+				return nil
+			}
+			seen[lower] = true
+			apps = append(apps, appEntry{Name: name, Path: path})
+			return nil
+		})
+	}
+
 	sort.Slice(apps, func(i, j int) bool {
 		return strings.ToLower(apps[i].Name) < strings.ToLower(apps[j].Name)
 	})
@@ -223,7 +245,11 @@ func (m model) handleEnter() (tea.Model, tea.Cmd) {
 		if app.AppID != "" {
 			_ = exec.Command("explorer.exe", "shell:AppsFolder\\"+app.AppID).Start()
 		} else if app.Path != "" {
-			_ = exec.Command("explorer.exe", app.Path).Start()
+			if strings.HasSuffix(strings.ToLower(app.Path), ".lnk") {
+				_ = exec.Command("cmd", "/c", "start", "", app.Path).Start()
+			} else {
+				_ = exec.Command("explorer.exe", app.Path).Start()
+			}
 		}
 		m.quitting = true
 		return m, tea.Quit
