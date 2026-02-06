@@ -6,7 +6,7 @@ A terminal UI for launching Windows apps. Built with [Go](https://go.dev) and [C
 
 - **Fuzzy search** — type to instantly filter all installed apps
 - **Web search** — prefix with `/` to search DuckDuckGo
-- **Two sources** — merges Start menu entries and registry install locations
+- **Three sources** — merges Start menu entries, registry install locations, and `.lnk` shortcut files (works without `explorer.exe`)
 - **Ghost filtering** — hides stale cached entries for uninstalled apps
 - **Single binary** — ~3 MB, zero runtime dependencies
 
@@ -48,9 +48,10 @@ zap
 
 1. Queries `Get-StartApps` for Start menu entries (UWP + desktop shortcuts)
 2. Scans the Windows registry for apps with an `InstallLocation`
-3. Merges and deduplicates by display name
-4. Filters out ghost entries (uninstalled apps cached by Windows)
-5. Launches apps via `explorer.exe shell:AppsFolder\{AppID}` or by opening the install directory
+3. Walks `.lnk` files in Start Menu folders (works without `explorer.exe` as shell)
+4. Merges and deduplicates by display name
+5. Filters out ghost entries (uninstalled apps cached by Windows)
+6. Launches via `shell:AppsFolder\{AppID}`, shortcut, or install directory
 
 ## Requirements
 
